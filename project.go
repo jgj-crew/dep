@@ -298,5 +298,5 @@ func BackupVendor(vpath, suffix string) (string, error) {
 		return "", errVendorBackupFailed
 	}
 
-	return "", nil
+	return "_base", nil
 }
