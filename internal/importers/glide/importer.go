@@ -151,13 +151,34 @@ func (g *Importer) convert(pr gps.ProjectRoot) (*dep.Manifest, *dep.Lock) {
 	lockImportsLen := len(g.glideLock.Imports)
 	lockTestImportsLen := len(g.glideLock.TestImports)
 
-	numPkgs := 0
-	if importsLen <= math.MaxInt-testImportsLen &&
-		importsLen+testImportsLen <= math.MaxInt-lockImportsLen &&
-		importsLen+testImportsLen+lockImportsLen <= math.MaxInt-lockTestImportsLen {
-		numPkgs = importsLen + testImportsLen + lockImportsLen + lockTestImportsLen
+	numPkgs := importsLen
+	overflow := false
+
+	if numPkgs > math.MaxInt-testImportsLen {
+		overflow = true
 	} else {
+		numPkgs += testImportsLen
+	}
+
+	if !overflow {
+		if numPkgs > math.MaxInt-lockImportsLen {
+			overflow = true
+		} else {
+			numPkgs += lockImportsLen
+		}
+	}
+
+	if !overflow {
+		if numPkgs > math.MaxInt-lockTestImportsLen {
+			overflow = true
+		} else {
+			numPkgs += lockTestImportsLen
+		}
+	}
+
+	if overflow {
 		g.Logger.Printf("  Warning: package count overflow while converting glide config; using default capacity")
+		numPkgs = 0
 	}
 
 	packages := make([]base.ImportedPackage, 0, numPkgs)
