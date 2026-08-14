@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -145,7 +146,21 @@ func (g *Importer) convert(pr gps.ProjectRoot) (*dep.Manifest, *dep.Lock) {
 	task.WriteString("...")
 	g.Logger.Println(task)
 
-	numPkgs := len(g.glideConfig.Imports) + len(g.glideConfig.TestImports) + len(g.glideLock.Imports) + len(g.glideLock.TestImports)
+	importsLen := len(g.glideConfig.Imports)
+	testImportsLen := len(g.glideConfig.TestImports)
+	lockImportsLen := len(g.glideLock.Imports)
+	lockTestImportsLen := len(g.glideLock.TestImports)
+
+	numPkgs := 0
+	for _, n := range []int{importsLen, testImportsLen, lockImportsLen, lockTestImportsLen} {
+		if numPkgs > math.MaxInt-n {
+			g.Logger.Printf("  Warning: package count overflow while converting glide config; disabling preallocation")
+			numPkgs = 0
+			break
+		}
+		numPkgs += n
+	}
+
 	packages := make([]base.ImportedPackage, 0, numPkgs)
 
 	// Constraints
